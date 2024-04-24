@@ -136,7 +136,6 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 	private int nextId = 1;
 
 	private static final int TX_CACHE_SIZE = 1000;
-	@SuppressWarnings("serial")
 	private final Map<String, BitcoinyTransaction> transactionCache = Collections.synchronizedMap(new LinkedHashMap<>(TX_CACHE_SIZE + 1, 0.75F, true) {
 		// This method is called just after a new entry has been added
 		@Override
@@ -216,10 +215,10 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 		if (!(countObj instanceof Long) || !(hexObj instanceof String))
 			throw new ForeignBlockchainException.NetworkException("Missing/invalid 'count' or 'hex' entries in JSON from ElectrumX blockchain.block.headers RPC");
 
-		Long returnedCount = (Long) countObj;
+		long returnedCount = (Long) countObj;
 		String hex = (String) hexObj;
 
-		List<byte[]> rawBlockHeaders = new ArrayList<>(returnedCount.intValue());
+		List<byte[]> rawBlockHeaders = new ArrayList<>((int) returnedCount);
 
 		byte[] raw = HashCode.fromString(hex).asBytes();
 
@@ -577,15 +576,14 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 	/**
 	 * Query current server for its list of peer servers, and return those we can parse.
 	 * <p>
-	 * @throws ForeignBlockchainException
-	 * @throws ClassCastException to be handled by caller
+	 * @throws ForeignBlockchainException Foreign Blockchain Exception
 	 */
 	private Set<Server> serverPeersSubscribe() throws ForeignBlockchainException {
 		Set<Server> newServers = new HashSet<>();
 
 		Object peers = this.connectedRpc("server.peers.subscribe");
 
-		for (Object rawPeer : (JSONArray) peers) {
+		for (Object rawPeer : (JSONArray) Objects.requireNonNull(peers)) {
 			JSONArray peer = (JSONArray) rawPeer;
 			if (peer.size() < 3)
 				// We're expecting at least 3 fields for each peer entry: IP, hostname, features
@@ -704,7 +702,7 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 				// Check connection is suitable by asking for server features, including genesis block hash
 				JSONObject featuresJson = (JSONObject) this.connectedRpc("server.features");
 
-				if (featuresJson == null || Double.valueOf((String) featuresJson.get("protocol_min")) < MIN_PROTOCOL_VERSION)
+				if (featuresJson == null || Double.parseDouble((String) featuresJson.get("protocol_min")) < MIN_PROTOCOL_VERSION)
 					continue;
 
 				if (this.expectedGenesisHash != null && !featuresJson.get("genesis_hash").equals(this.expectedGenesisHash))
@@ -733,8 +731,8 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 	/**
 	 * Perform RPC using currently connected server.
 	 * <p>
-	 * @param method
-	 * @param params
+	 * @param method method
+	 * @param params params
 	 * @return response Object, or null if server fails to respond
 	 * @throws ForeignBlockchainException if server returns error
 	 */
@@ -846,7 +844,7 @@ public class ElectrumX extends BitcoinyBlockchainProvider {
 
 	/**
 	 * Closes connection to <tt>server</tt> if it is currently connected server.
-	 * @param server
+	 * @param server Server to close
 	 */
 	private void closeServer(ChainableServer server) {
 		synchronized (this.serverLock) {
